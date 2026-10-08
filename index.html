@@ -1,0 +1,1037 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B7F5B">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+<title>一人一猫体重簿</title>
+<style>
+  /* ---------- 色板(已过 dataviz 六项校验,浅/深两模式) ---------- */
+  :root{
+    --bg:#F6F3EC;
+    --surface:#FFFFFF;
+    --surface-2:#EFEAE0;
+    --ink:#29281F;
+    --ink-2:#6B675A;
+    --ink-3:#98937F;
+    --line:#E3DCCB;
+    --me:#0B7F5B;
+    --cat:#A8701F;
+    --me-soft:rgba(11,127,91,.10);
+    --cat-soft:rgba(168,112,31,.10);
+    --good:#1F7A4D;
+    --good-soft:rgba(31,122,77,.13);
+    --warn:#8F6400;
+    --warn-soft:rgba(143,100,0,.13);
+    --bad:#B3372A;
+    --bad-soft:rgba(179,55,42,.12);
+    --shadow:0 1px 2px rgba(41,40,31,.05), 0 4px 14px rgba(41,40,31,.06);
+    --focus-ring:0 0 0 3px rgba(11,127,91,.30);
+    color-scheme:light;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1C1B17;
+      --surface:#262521;
+      --surface-2:#2E2C26;
+      --ink:#ECE7DA;
+      --ink-2:#B3AD9C;
+      --ink-3:#847E6D;
+      --line:#3B3931;
+      --me:#45A98C;
+      --cat:#C6822E;
+      --me-soft:rgba(69,169,140,.14);
+      --cat-soft:rgba(198,130,46,.14);
+      --good:#5BBF8E;
+      --good-soft:rgba(91,191,142,.15);
+      --warn:#D9A94E;
+      --warn-soft:rgba(217,169,78,.15);
+      --bad:#E0705F;
+      --bad-soft:rgba(224,112,95,.15);
+      --shadow:0 1px 2px rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.25);
+      --focus-ring:0 0 0 3px rgba(69,169,140,.35);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1C1B17;
+    --surface:#262521;
+    --surface-2:#2E2C26;
+    --ink:#ECE7DA;
+    --ink-2:#B3AD9C;
+    --ink-3:#847E6D;
+    --line:#3B3931;
+    --me:#45A98C;
+    --cat:#C6822E;
+    --me-soft:rgba(69,169,140,.14);
+    --cat-soft:rgba(198,130,46,.14);
+    --good:#5BBF8E;
+    --good-soft:rgba(91,191,142,.15);
+    --warn:#D9A94E;
+    --warn-soft:rgba(217,169,78,.15);
+    --bad:#E0705F;
+    --bad-soft:rgba(224,112,95,.15);
+    --shadow:0 1px 2px rgba(0,0,0,.25), 0 4px 14px rgba(0,0,0,.25);
+    --focus-ring:0 0 0 3px rgba(69,169,140,.35);
+    color-scheme:dark;
+  }
+
+  *{ box-sizing:border-box; }
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","HarmonyOS Sans SC","MiSans","Microsoft YaHei",sans-serif;
+    font-size:15px;
+    line-height:1.55;
+    padding-inline:20px;
+  }
+  .wrap{ max-width:560px; margin:0 auto; padding-block:8px 40px; }
+  h1,h2,h3{ text-wrap:balance; }
+  button{ font:inherit; color:inherit; cursor:pointer; }
+  input{ font:inherit; color:var(--ink); }
+  :focus-visible{ outline:none; box-shadow:var(--focus-ring); border-radius:8px; }
+
+  /* ---------- 头部 ---------- */
+  header{ padding-block:14px 4px; }
+  .kicker{
+    font-size:12px; letter-spacing:.14em; color:var(--ink-3);
+    text-transform:uppercase; margin-bottom:2px;
+  }
+  .title-row{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  h1{ font-size:26px; line-height:1.2; margin:0; letter-spacing:.02em; font-weight:700; }
+  .today{ font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+  /* ---------- 示例横幅 ---------- */
+  .banner{
+    display:none; margin-block:10px 2px; padding:8px 12px;
+    background:var(--surface-2); border-radius:10px;
+    font-size:13px; color:var(--ink-2);
+  }
+  .banner.on{ display:block; }
+
+  /* ---------- 录入卡 ---------- */
+  .entry{
+    margin-block:14px; background:var(--surface);
+    border:1px solid var(--line); border-radius:16px;
+    box-shadow:var(--shadow); padding:16px;
+  }
+  .seg{ display:flex; gap:6px; background:var(--surface-2); border-radius:10px; padding:4px; }
+  .seg button{
+    flex:1; border:0; background:transparent; border-radius:8px;
+    padding:8px 10px; font-weight:600; color:var(--ink-2);
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    transition:background .15s,color .15s;
+  }
+  .seg button .dot{ width:8px; height:8px; border-radius:50%; }
+  .seg button[aria-pressed="true"]{ background:var(--surface); color:var(--ink); box-shadow:0 1px 3px rgba(0,0,0,.10); }
+  .seg button[aria-pressed="true"] .dot.me{ background:var(--me); }
+  .seg button[aria-pressed="true"] .dot.cat{ background:var(--cat); }
+  .seg button .dot.me{ background:var(--ink-3); }
+  .seg button .dot.cat{ background:var(--ink-3); }
+
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .field label{ display:block; font-size:12.5px; color:var(--ink-2); margin-bottom:4px; }
+  .field input{
+    width:100%; border:1px solid var(--line); border-radius:10px;
+    background:var(--bg); padding:10px 12px; font-size:16px;
+  }
+  .field input::placeholder{ color:var(--ink-3); }
+  #in-weight{ font-family:"Fraunces",Georgia,serif; font-size:24px; font-weight:600; padding:8px 12px; font-variant-numeric:tabular-nums; }
+  .unit-hint{ position:absolute; right:14px; top:50%; transform:translateY(-140%); font-size:13px; color:var(--ink-3); pointer-events:none; }
+  .pos{ position:relative; }
+
+  .note-row{ margin-top:10px; }
+  .note-row input{ padding:9px 12px; font-size:14.5px; }
+
+  .save-btn{
+    margin-top:12px; width:100%; border:0; border-radius:12px;
+    background:var(--me); color:#fff; font-weight:600; font-size:16px;
+    padding:12px; letter-spacing:.06em;
+  }
+  .save-btn:active{ transform:translateY(1px); }
+  .save-btn.cat-mode{ background:var(--cat); }
+  .form-msg{ margin-top:8px; font-size:13px; color:var(--bad); min-height:1.2em; }
+
+  /* ---------- 状态贴片 ---------- */
+  .tiles{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-block:16px 18px; }
+  @media (max-width:400px){ .tiles{ grid-template-columns:1fr; } }
+  .tile{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:14px; padding:14px; box-shadow:var(--shadow);
+  }
+  .tile .who{ display:flex; align-items:center; gap:7px; font-size:13px; color:var(--ink-2); }
+  .tile .who .dot{ width:9px; height:9px; border-radius:50%; }
+  .tile .val{
+    font-family:"Fraunces",Georgia,serif; font-weight:600;
+    font-size:34px; line-height:1.1; margin-top:6px;
+    font-variant-numeric:tabular-nums;
+  }
+  .tile .val small{ font-size:14px; font-weight:500; color:var(--ink-2); margin-left:3px; font-family:inherit; }
+  .tile .sub{ margin-top:6px; font-size:12.5px; color:var(--ink-2); font-variant-numeric:tabular-nums; }
+  .chip{
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:12px; font-weight:600; border-radius:999px;
+    padding:2.5px 9px; margin-top:8px;
+  }
+  .chip.good{ background:var(--good-soft); color:var(--good); }
+  .chip.warn{ background:var(--warn-soft); color:var(--warn); }
+  .chip.bad{ background:var(--bad-soft); color:var(--bad); }
+  .chip.neutral{ background:var(--surface-2); color:var(--ink-2); }
+  .no-data{ font-size:14px; color:var(--ink-3); margin-top:8px; }
+
+  /* ---------- 图表卡 ---------- */
+  .chart-card{
+    background:var(--surface); border:1px solid var(--line);
+    border-radius:16px; padding:16px 16px 10px; box-shadow:var(--shadow);
+    margin-bottom:16px;
+  }
+  .chart-head{ display:flex; justify-content:space-between; align-items:baseline; gap:4px 10px; flex-wrap:wrap; margin-bottom:6px; }
+  .chart-head .name{ display:flex; align-items:center; gap:7px; font-weight:600; font-size:15px; }
+  .chart-head .name .dot{ width:9px; height:9px; border-radius:50%; }
+  .chart-head .live{ font-size:13px; color:var(--ink-2); font-variant-numeric:tabular-nums; text-align:right; }
+  .chart-head .live b{ color:var(--ink); font-weight:600; }
+  .chart-card svg{ display:block; width:100%; height:auto; }
+  .chart-note{ font-size:12px; color:var(--ink-3); margin-top:2px; }
+
+  /* ---------- 记录列表 ---------- */
+  .list-section h2{ font-size:16px; margin:20px 0 6px; }
+  .rec{
+    display:flex; align-items:center; gap:10px;
+    padding-block:10px; border-bottom:1px solid var(--line);
+    font-variant-numeric:tabular-nums;
+  }
+  .rec:last-child{ border-bottom:0; }
+  .rec .dot{ width:8px; height:8px; border-radius:50%; flex:none; }
+  .rec .date{ font-size:13px; color:var(--ink-2); width:74px; flex:none; }
+  .rec .who{ font-size:13px; color:var(--ink-3); width:38px; flex:none; }
+  .rec .w{ font-family:"Fraunces",Georgia,serif; font-weight:600; font-size:17px; min-width:64px; }
+  .rec .w small{ font-size:12px; color:var(--ink-3); font-weight:400; }
+  .rec .delta{ font-size:12.5px; color:var(--ink-2); min-width:44px; }
+  .rec .note{ flex:1; font-size:12.5px; color:var(--ink-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:right; }
+  .rec .del{
+    border:0; background:transparent; color:var(--ink-3);
+    font-size:12px; padding:4px 6px; border-radius:6px; flex:none;
+  }
+  .rec .del.confirm{ color:var(--bad); font-weight:600; background:var(--bad-soft); }
+
+  /* ---------- 设置 ---------- */
+  details.settings{ margin-top:20px; }
+  details.settings summary{
+    cursor:pointer; font-weight:600; font-size:15px;
+    padding:12px 16px; background:var(--surface); border:1px solid var(--line);
+    border-radius:12px; list-style:none;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  details.settings summary::-webkit-details-marker{ display:none; }
+  details.settings summary .arrow{ color:var(--ink-3); transition:transform .15s; }
+  details.settings[open] summary .arrow{ transform:rotate(90deg); }
+  .settings-body{
+    background:var(--surface); border:1px solid var(--line); border-top:0;
+    border-radius:0 0 12px 12px; padding:16px;
+  }
+  .settings-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:400px){ .settings-grid{ grid-template-columns:1fr; } }
+  .settings-grid .field input{ font-size:15px; padding:9px 12px; }
+  .save-settings{
+    margin-top:12px; border:1px solid var(--line); background:var(--surface-2);
+    border-radius:10px; padding:9px 16px; font-weight:600; font-size:14px;
+  }
+  .backup-row{ display:flex; gap:10px; margin-top:10px; }
+  .backup-row .save-settings{ flex:1; margin-top:0; }
+  .backup-hint{ font-size:12px; color:var(--ink-3); margin:10px 0 0; line-height:1.5; }
+
+  /* ---------- 页脚 / toast ---------- */
+  footer{
+    margin-top:26px; font-size:12px; color:var(--ink-3);
+    display:flex; align-items:center; gap:6px; justify-content:center;
+  }
+  footer .cloud-dot{ width:7px; height:7px; border-radius:50%; background:var(--good); }
+  footer .local-dot{ width:7px; height:7px; border-radius:50%; background:var(--warn); }
+  .toast{
+    position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom, 0px));
+    transform:translateX(-50%) translateY(8px);
+    background:var(--ink); color:var(--bg);
+    padding:9px 18px; border-radius:999px; font-size:14px; font-weight:600;
+    opacity:0; pointer-events:none; transition:opacity .2s, transform .2s;
+    z-index:10; white-space:nowrap;
+  }
+  .toast.on{ opacity:1; transform:translateX(-50%) translateY(0); }
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap">
+
+<header class="wrap">
+  <div class="kicker">每日一称</div>
+  <div class="title-row">
+    <h1>一人一猫体重簿</h1>
+    <div class="today" id="today-label"></div>
+  </div>
+  <div class="banner" id="sample-banner">当前展示的是示例数据 —— 记下第一笔真实体重后会自动清除。</div>
+</header>
+
+<main class="wrap">
+
+  <!-- 录入 -->
+  <section class="entry" aria-label="记录体重">
+    <div class="seg" role="group" aria-label="选择记录对象">
+      <button type="button" id="seg-me" aria-pressed="true"><span class="dot me"></span>我</button>
+      <button type="button" id="seg-cat" aria-pressed="false"><span class="dot cat"></span><span id="seg-cat-name">小葵</span></button>
+    </div>
+    <div class="field-row">
+      <div class="field pos">
+        <label for="in-weight">体重(kg)</label>
+        <input id="in-weight" type="number" inputmode="decimal" step="0.01" min="0.5" max="300" placeholder="0.00">
+      </div>
+      <div class="field">
+        <label for="in-date">日期</label>
+        <input id="in-date" type="date">
+      </div>
+    </div>
+    <div class="field note-row">
+      <label for="in-note">备注(可选)</label>
+      <input id="in-note" type="text" maxlength="40" placeholder="如:早上空腹 / 换粮第 3 天">
+    </div>
+    <button class="save-btn" id="btn-save" type="button">记 下</button>
+    <div class="form-msg" id="form-msg"></div>
+  </section>
+
+  <!-- 状态贴片 -->
+  <section class="tiles" aria-label="最新状态">
+    <div class="tile" id="tile-me">
+      <div class="who"><span class="dot" style="background:var(--me)"></span>我</div>
+      <div id="tile-me-body"><div class="no-data">还没有记录</div></div>
+    </div>
+    <div class="tile" id="tile-cat">
+      <div class="who"><span class="dot" style="background:var(--cat)"></span><span id="tile-cat-name">小葵</span></div>
+      <div id="tile-cat-body"><div class="no-data">还没有记录</div></div>
+    </div>
+  </section>
+
+  <!-- 图表 -->
+  <section class="chart-card" aria-label="我的体重趋势">
+    <div class="chart-head">
+      <div class="name"><span class="dot" style="background:var(--me)"></span>我的体重</div>
+      <div class="live" id="live-me"></div>
+    </div>
+    <div id="chart-me"></div>
+    <div class="chart-note" id="chart-me-note"></div>
+  </section>
+
+  <section class="chart-card" aria-label="猫咪体重趋势">
+    <div class="chart-head">
+      <div class="name"><span class="dot" style="background:var(--cat)"></span><span id="chart-cat-name">小葵</span>的体重</div>
+      <div class="live" id="live-cat"></div>
+    </div>
+    <div id="chart-cat"></div>
+    <div class="chart-note" id="chart-cat-note"></div>
+  </section>
+
+  <!-- 记录明细 -->
+  <section class="list-section" aria-label="记录明细">
+    <h2>记录明细</h2>
+    <div id="rec-list"></div>
+  </section>
+
+  <!-- 设置 -->
+  <details class="settings">
+    <summary>设置 <span class="arrow">›</span></summary>
+    <div class="settings-body">
+      <div class="settings-grid">
+        <div class="field">
+          <label for="set-height">我的身高(cm)</label>
+          <input id="set-height" type="number" inputmode="decimal" min="80" max="250" step="0.1" placeholder="170">
+        </div>
+        <div class="field">
+          <label for="set-target">我的目标体重(kg)</label>
+          <input id="set-target" type="number" inputmode="decimal" min="25" max="250" step="0.1" placeholder="选填">
+        </div>
+        <div class="field">
+          <label for="set-catname">猫的名字</label>
+          <input id="set-catname" type="text" maxlength="12" placeholder="小葵">
+        </div>
+        <div class="field">
+          <label for="set-cat-min">猫理想区间下限(kg)</label>
+          <input id="set-cat-min" type="number" inputmode="decimal" min="1" max="20" step="0.1" placeholder="4.0">
+        </div>
+        <div class="field">
+          <label for="set-cat-max">猫理想区间上限(kg)</label>
+          <input id="set-cat-max" type="number" inputmode="decimal" min="1" max="20" step="0.1" placeholder="5.5">
+        </div>
+      </div>
+      <button class="save-settings" id="btn-save-settings" type="button">保存设置</button>
+      <div class="backup-row">
+        <button class="save-settings" id="btn-export" type="button">导出备份</button>
+        <button class="save-settings" id="btn-import" type="button">导入备份</button>
+        <input id="in-import" type="file" accept=".json,application/json" hidden>
+      </div>
+      <p class="backup-hint">数据存在本机浏览器里。定期导出一个 JSON 备份文件,换手机或清理浏览器数据前,先导出、再在新设备导入即可恢复。</p>
+    </div>
+  </details>
+
+  <footer id="foot">数据保存在这台设备的浏览器里</footer>
+</main>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ================= 工具 ================= */
+  var $ = function(id){ return document.getElementById(id); };
+  var pad2 = function(n){ return n < 10 ? "0" + n : "" + n; };
+  var todayStr = function(){
+    var d = new Date();
+    return d.getFullYear() + "-" + pad2(d.getMonth()+1) + "-" + pad2(d.getDate());
+  };
+  var parseDate = function(s){
+    var p = s.split("-");
+    return new Date(+p[0], +p[1]-1, +p[2]);
+  };
+  var fmtCN = function(s){   // "2026-10-08" -> "10月8日"
+    var p = s.split("-");
+    return (+p[1]) + "月" + (+p[2]) + "日";
+  };
+  var fmtMD = function(s){   // 短式 "10/8"
+    var p = s.split("-");
+    return (+p[1]) + "/" + (+p[2]);
+  };
+  var round1 = function(x){ return Math.round(x*10)/10; };
+  var round2 = function(x){ return Math.round(x*100)/100; };
+  var fmtSigned = function(x){
+    if (x === null || isNaN(x)) return "—";
+    var v = round2(x);
+    if (Math.abs(v) < 0.005) return "±0";
+    return v > 0 ? "+" + v.toFixed(2).replace(/0$/,"") : "−" + Math.abs(v).toFixed(2).replace(/0$/,"");
+  };
+  var showToast = function(msg){
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.add("on");
+    clearTimeout(showToast._tm);
+    showToast._tm = setTimeout(function(){ t.classList.remove("on"); }, 1800);
+  };
+
+  /* ================= 状态 ================= */
+  var DEFAULT_SETTINGS = {
+    height: null,      // cm,影响 BMI
+    targetMe: null,    // 我的目标体重
+    catName: "小葵",
+    catMin: 4.0,
+    catMax: 5.5,
+    sample: false
+  };
+  var state = {
+    settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
+    records: [],           // {id, subject:'me'|'cat', date, weight, note, sample}
+    subject: "me",
+    cloud: false
+  };
+
+  /* ================= 存储层:云端优先,本地兜底 ================= */
+  var LS_R = "wd_records_v1", LS_S = "wd_settings_v1";
+  var cdb = null;
+  try { cdb = (window.claude && window.claude.db) ? window.claude.db : null; } catch(e){ cdb = null; }
+
+  function lsRead(){
+    try {
+      var r = JSON.parse(localStorage.getItem(LS_R) || "[]");
+      var s = JSON.parse(localStorage.getItem(LS_S) || "null");
+      return { records: Array.isArray(r) ? r : [], settings: s };
+    } catch(e){ return { records: [], settings: null }; }
+  }
+  function lsWrite(){
+    try {
+      localStorage.setItem(LS_R, JSON.stringify(state.records));
+      localStorage.setItem(LS_S, JSON.stringify(state.settings));
+    } catch(e){}
+  }
+
+  // 归一化云端 list 的返回(数组或 {documents:[...]} 都接受)
+  function normList(res){
+    var arr = res;
+    if (!Array.isArray(arr) && res && Array.isArray(res.documents)) arr = res.documents;
+    else if (!Array.isArray(arr) && res && Array.isArray(res.items)) arr = res.items;
+    else if (!Array.isArray(arr) && res && typeof res === "object" && res.data && Array.isArray(res.data)) arr = res.data;
+    return Array.isArray(arr) ? arr : [];
+  }
+  function docToRecord(doc, fallbackId){
+    if (!doc || typeof doc !== "object") return null;
+    if (!doc.subject || !doc.date || !(doc.weight > 0)) return null;
+    return {
+      id: doc.id || doc._id || fallbackId,
+      subject: doc.subject === "cat" ? "cat" : "me",
+      date: String(doc.date).slice(0,10),
+      weight: +doc.weight,
+      note: doc.note || "",
+      sample: !!doc.sample,
+      ts: doc.ts || 0
+    };
+  }
+
+  function cloudList(collection){
+    if (!cdb) return Promise.resolve(null);
+    try {
+      return Promise.resolve(cdb.list(collection)).then(normList).catch(function(){ return null; });
+    } catch(e){ return Promise.resolve(null); }
+  }
+  function cloudSet(collection, id, data){
+    if (!cdb) return Promise.resolve(false);
+    try {
+      var p = cdb.set(collection, id, data);
+      return Promise.resolve(p).then(function(){ return true; }, function(){ return false; });
+    } catch(e){ return Promise.resolve(false); }
+  }
+  function cloudDelete(collection, id){
+    if (!cdb) return Promise.resolve(false);
+    try {
+      var p = cdb.delete(collection, id);
+      return Promise.resolve(p).then(function(){ return true; }, function(){ return false; });
+    } catch(e){ return Promise.resolve(false); }
+  }
+
+  function ensureSample(){
+    // 首次使用:预置明确标注的示例数据,首屏不空
+    var today = parseDate(todayStr()).getTime();
+    var D = function(daysAgo){ var d = new Date(today - daysAgo*86400000); return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate()); };
+    var samples = [
+      { subject:"me",  date:D(21), weight:73.2, note:"" },
+      { subject:"me",  date:D(17), weight:72.8, note:"" },
+      { subject:"me",  date:D(12), weight:72.5, note:"" },
+      { subject:"me",  date:D(6),  weight:72.1, note:"" },
+      { subject:"me",  date:D(2),  weight:71.9, note:"晚上称的" },
+      { subject:"me",  date:D(0),  weight:71.6, note:"" },
+      { subject:"cat", date:D(18), weight:4.58, note:"" },
+      { subject:"cat", date:D(11), weight:4.62, note:"" },
+      { subject:"cat", date:D(4),  weight:4.66, note:"换粮第 3 天" },
+      { subject:"cat", date:D(0),  weight:4.63, note:"" }
+    ];
+    state.records = samples.map(function(s){
+      return { id: s.subject + "_" + s.date.replace(/-/g,""), subject:s.subject, date:s.date, weight:s.weight, note:s.note, sample:true, ts:0 };
+    });
+    state.settings.sample = true;
+    state.settings.height = state.settings.height || 175;
+  }
+
+  function sortRecords(){
+    state.records.sort(function(a,b){
+      if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+      return (a.ts||0) - (b.ts||0);
+    });
+  }
+
+  function initStorage(){
+    // 1) 本地缓存先行,页面立即可用
+    var local = lsRead();
+    state.records = local.records;
+    if (local.settings) state.settings = Object.assign({}, DEFAULT_SETTINGS, local.settings);
+    // 旧默认名迁移:存过默认名"小猫"的设备自动改成"小葵"(用户自拟的名字不动)
+    if (state.settings.catName === "小猫"){
+      state.settings.catName = DEFAULT_SETTINGS.catName;
+      lsWrite();
+    }
+    if (state.records.length === 0 && !local.settings) ensureSample();
+    lsWrite();
+    renderAll();
+
+    // 2) 云端数据到达后覆盖渲染
+    if (!cdb){ updateFooter(); return; }
+    Promise.all([cloudList("records"), cloudList("settings")]).then(function(results){
+      var rDocs = results[0], sDocs = results[1];
+      if (rDocs === null && sDocs === null){ updateFooter(); return; } // 云端不可用,留在本地模式
+      state.cloud = true;
+      if (rDocs && rDocs.length){
+        var seen = {};
+        state.records = rDocs.map(function(d, i){
+          var r = docToRecord(d, "cloud_" + i);
+          if (r) seen[r.id] = r;
+          return r;
+        }).filter(Boolean).filter(function(r){ return !seen[r.id] || seen[r.id] === r; });
+        // 云端 settings
+        var prof = (sDocs || []).filter(function(d){ return d && (d.id === "profile" || d._id === "profile" || !d.id); })[0];
+        if (prof) state.settings = Object.assign({}, DEFAULT_SETTINGS, {
+          height: prof.height || null, targetMe: prof.targetMe || null,
+          catName: prof.catName || "小葵",
+          catMin: +prof.catMin || 4.0, catMax: +prof.catMax || 5.5,
+          sample: !!prof.sample
+        });
+      } else if (rDocs && rDocs.length === 0){
+        // 云端为空:若本地也只是示例,把示例推上云端;否则把本地真实数据推上云端
+        state.settings.sample = state.records.length > 0 && state.records.every(function(r){ return r.sample; });
+        state.records.forEach(function(r){ cloudSet("records", r.id, recToDoc(r)); });
+        cloudSet("settings", "profile", state.settings);
+      }
+      lsWrite();
+      fillSettingsForm();
+      renderAll();
+    });
+  }
+
+  function recToDoc(r){
+    return { subject:r.subject, date:r.date, weight:r.weight, note:r.note||"", sample:!!r.sample, ts:r.ts||Date.now() };
+  }
+
+  function saveRecord(subject, date, weight, note){
+    var id = subject + "_" + date.replace(/-/g,"");
+    var existing = state.records.filter(function(r){ return r.id === id; })[0];
+    var rec = { id:id, subject:subject, date:date, weight:weight, note:note, sample:false, ts:Date.now() };
+    if (existing) state.records = state.records.filter(function(r){ return r.id !== id; });
+
+    // 第一笔真实记录:清掉全部示例
+    var hadSample = state.records.some(function(r){ return r.sample; });
+    if (hadSample){
+      state.records.filter(function(r){ return r.sample; }).forEach(function(r){ cloudDelete("records", r.id); });
+      state.records = state.records.filter(function(r){ return !r.sample; });
+      state.settings.sample = false;
+      cloudSet("settings", "profile", state.settings);
+    }
+    state.records.push(rec);
+    sortRecords();
+    lsWrite();
+    cloudSet("records", id, recToDoc(rec));
+    renderAll();
+    return !!existing;
+  }
+
+  function deleteRecord(id){
+    state.records = state.records.filter(function(r){ return r.id !== id; });
+    lsWrite();
+    cloudDelete("records", id);
+    renderAll();
+  }
+
+  function saveSettings(){
+    var h = parseFloat($("set-height").value);
+    var t = parseFloat($("set-target").value);
+    var n = $("set-catname").value.trim() || "小葵";
+    var cmin = parseFloat($("set-cat-min").value);
+    var cmax = parseFloat($("set-cat-max").value);
+    state.settings.height = h > 0 ? h : null;
+    state.settings.targetMe = t > 0 ? t : null;
+    state.settings.catName = n;
+    if (cmin > 0) state.settings.catMin = cmin;
+    if (cmax > 0) state.settings.catMax = cmax;
+    if (state.settings.catMin > state.settings.catMax){
+      var tmp = state.settings.catMin; state.settings.catMin = state.settings.catMax; state.settings.catMax = tmp;
+    }
+    lsWrite();
+    cloudSet("settings", "profile", state.settings);
+    renderAll();
+  }
+
+  /* ================= BMI 与区间 ================= */
+  function bmiInfo(weight){
+    var h = state.settings.height;
+    if (!h || h < 80) return null;
+    var bmi = weight / Math.pow(h/100, 2);
+    var grade, cls;
+    if (bmi < 18.5){ grade = "偏瘦"; cls = "warn"; }
+    else if (bmi < 24){ grade = "正常"; cls = "good"; }
+    else if (bmi < 28){ grade = "偏重"; cls = "warn"; }
+    else { grade = "肥胖"; cls = "bad"; }
+    return { value: round1(bmi), grade: grade, cls: cls };
+  }
+  function catZone(weight){
+    var lo = state.settings.catMin, hi = state.settings.catMax;
+    if (weight < lo) return { text: "低于理想区间", cls: "warn" };
+    if (weight > hi) return { text: "高于理想区间", cls: "warn" };
+    return { text: "理想区间内", cls: "good" };
+  }
+
+  /* ================= 渲染:贴片 ================= */
+  function latestOf(subject){
+    var arr = state.records.filter(function(r){ return r.subject === subject; });
+    return arr.length ? arr[arr.length-1] : null;
+  }
+  function prevOf(subject){
+    var arr = state.records.filter(function(r){ return r.subject === subject; });
+    return arr.length > 1 ? arr[arr.length-2] : null;
+  }
+
+  function renderTileMe(){
+    var el = $("tile-me-body");
+    var last = latestOf("me"), prev = prevOf("me");
+    if (!last){ el.innerHTML = '<div class="no-data">还没有记录</div>'; return; }
+    var dec = 1;
+    var html = '<div class="val">' + last.weight.toFixed(dec) + '<small>kg</small></div>';
+    var bits = [];
+    if (prev) bits.push("较上次 " + fmtSigned(last.weight - prev.weight) + " kg");
+    var d = new Date(parseDate(last.date));
+    bits.push(fmtCN(last.date));
+    html += '<div class="sub">' + bits.join(" · ") + '</div>';
+    var b = bmiInfo(last.weight);
+    if (b) html += '<div class="chip ' + b.cls + '">BMI ' + b.value.toFixed(1) + " · " + b.grade + "</div>";
+    else html += '<div class="chip neutral">填身高后显示 BMI</div>';
+    el.innerHTML = html;
+  }
+
+  function renderTileCat(){
+    var el = $("tile-cat-body");
+    var last = latestOf("cat"), prev = prevOf("cat");
+    if (!last){ el.innerHTML = '<div class="no-data">还没有记录</div>'; return; }
+    var html = '<div class="val">' + last.weight.toFixed(2) + '<small>kg</small></div>';
+    var bits = [];
+    if (prev) bits.push("较上次 " + fmtSigned(last.weight - prev.weight) + " kg");
+    bits.push(fmtCN(last.date));
+    html += '<div class="sub">' + bits.join(" · ") + '</div>';
+    var z = catZone(last.weight);
+    html += '<div class="chip ' + z.cls + '">' + z.text + "</div>";
+    el.innerHTML = html;
+  }
+
+  /* ================= 渲染:折线图(手写 SVG) ================= */
+  function niceTicks(lo, hi, n){
+    var span = hi - lo;
+    if (span <= 0){ hi = lo + 1; span = 1; }
+    var step = span / n;
+    var mag = Math.pow(10, Math.floor(Math.log(step)/Math.LN10));
+    var norm = step / mag;
+    if (norm > 5) step = 10*mag; else if (norm > 2) step = 5*mag; else if (norm > 1) step = 2*mag; else step = mag;
+    var ticks = [];
+    var start = Math.ceil(lo/step)*step;
+    for (var v = start; v <= hi + 1e-9; v += step) ticks.push(v);
+    return ticks;
+  }
+
+  function renderChart(containerId, liveId, noteId, subject, colorVar, extras){
+    var box = $(containerId), live = $(liveId), note = $(noteId);
+    var recs = state.records.filter(function(r){ return r.subject === subject; }).slice(-90);
+    var W = 360, H = 190, padL = 40, padR = 14, padT = 14, padB = 24;
+    var color = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
+
+    if (recs.length === 0){
+      box.innerHTML = "";
+      live.innerHTML = "暂无数据";
+      note.textContent = "在上方记一笔后,这里会出现趋势线。";
+      return;
+    }
+    var last = recs[recs.length-1], prev = recs.length > 1 ? recs[recs.length-2] : null;
+    var dec = subject === "cat" ? 2 : 1;
+    live.innerHTML = "<b>" + last.weight.toFixed(dec) + " kg</b>" +
+      (prev ? " · 较上次 " + fmtSigned(last.weight - prev.weight) : "");
+
+    var fmtTick = function(v){
+      return dec === 2 ? (Math.round(v*10)/10).toFixed(1) : (Math.round(v*10)/10).toFixed(1);
+    };
+
+    // 值域(融入目标线 / 区间带)
+    var vals = recs.map(function(r){ return r.weight; });
+    var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    if (extras && extras.target){ vals = vals.concat([extras.target]); }
+    if (extras && extras.band){ vals = vals.concat([extras.band.min, extras.band.max]); }
+    var lo2 = Math.min.apply(null, vals), hi2 = Math.max.apply(null, vals);
+    var pad = Math.max((hi2 - lo2) * 0.18, dec === 2 ? 0.15 : 0.8);
+    var yLo = lo2 - pad, yHi = hi2 + pad;
+
+    // 时间域(按真实日期;同日多点退化为序号)
+    var times = recs.map(function(r){ return parseDate(r.date).getTime(); });
+    var tLo = times[0], tHi = times[times.length-1];
+    var useIndex = (tHi - tLo) < 86400000 && recs.length > 1;
+    var x = function(i){
+      if (useIndex) return padL + (W-padL-padR) * (recs.length===1?0.5:i/(recs.length-1));
+      return padL + (W-padL-padR) * ((times[i]-tLo)/Math.max(tHi-tLo,1));
+    };
+    var y = function(v){ return padT + (H-padT-padB) * (1 - (v-yLo)/(yHi-yLo)); };
+
+    var ticks = niceTicks(yLo, yHi, 3);
+    var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="体重趋势">';
+
+    // 理想区间带(猫)
+    if (extras && extras.band){
+      var by1 = y(Math.min(extras.band.max, yHi)), by2 = y(Math.max(extras.band.min, yLo));
+      var gvar = subject === "cat" ? "--good-soft" : "--me-soft";
+      var gcol = getComputedStyle(document.documentElement).getPropertyValue(gvar).trim();
+      s += '<rect x="' + padL + '" y="' + by1 + '" width="' + (W-padL-padR) + '" height="' + Math.max(by2-by1,0) + '" fill="' + gcol + '" rx="3"/>';
+      s += '<text x="' + (W-padR) + '" y="' + (by1-3) + '" text-anchor="end" font-size="10.5" fill="var(--good)">理想 ' + extras.band.min.toFixed(1) + "–" + extras.band.max.toFixed(1) + "</text>";
+    }
+
+    // 网格 + y 标签
+    ticks.forEach(function(v){
+      var gy = y(v);
+      s += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W-padR) + '" y2="' + gy + '" stroke="var(--line)" stroke-width="1"/>';
+      s += '<text x="' + (padL-6) + '" y="' + (gy+3.5) + '" text-anchor="end" font-size="10.5" fill="var(--ink-3)">' + fmtTick(v) + "</text>";
+    });
+
+    // 目标虚线(我)
+    if (extras && extras.target && extras.target >= yLo && extras.target <= yHi){
+      var ty = y(extras.target);
+      s += '<line x1="' + padL + '" y1="' + ty + '" x2="' + (W-padR) + '" y2="' + ty + '" stroke="var(--ink-3)" stroke-width="1.4" stroke-dasharray="5 4"/>';
+      s += '<text x="' + (W-padR) + '" y="' + (ty-4) + '" text-anchor="end" font-size="10.5" fill="var(--ink-2)">目标 ' + extras.target.toFixed(1) + "</text>";
+    }
+
+    // 区域 + 折线
+    var pts = recs.map(function(r,i){ return [x(i), y(r.weight), r]; });
+    var lineD = pts.map(function(p,i){ return (i?"L":"M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+    var areaD = lineD + " L" + pts[pts.length-1][0].toFixed(1) + " " + (H-padB) + " L" + pts[0][0].toFixed(1) + " " + (H-padB) + " Z";
+    s += '<path d="' + areaD + '" fill="' + color + '" opacity="0.10"/>';
+    s += '<path d="' + lineD + '" fill="none" stroke="' + color + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>';
+
+    // 数据点(>26 个点时只描端点,避免拥挤)
+    var drawDots = pts.length <= 26;
+    if (drawDots){
+      pts.forEach(function(p){
+        s += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3" fill="' + color + '" stroke="var(--surface)" stroke-width="2"/>';
+      });
+    }
+    // 末点强调
+    var lp = pts[pts.length-1];
+    s += '<circle cx="' + lp[0].toFixed(1) + '" cy="' + lp[1].toFixed(1) + '" r="4.5" fill="' + color + '" stroke="var(--surface)" stroke-width="2"/>';
+    var lx = Math.min(lp[0]+8, W-padR-4);
+    s += '<text x="' + lx + '" y="' + (lp[1]-8) + '" font-size="11.5" font-weight="600" fill="var(--ink)" text-anchor="' + (lx > W-60 ? "end" : "start") + '">' + last.weight.toFixed(dec) + "</text>";
+
+    // x 标签:首、中、末
+    var mid = Math.floor((recs.length-1)/2);
+    [[0,"start"],[mid,"middle"],[recs.length-1,"end"]].forEach(function(pair){
+      var i = pair[0], anchor = pair[1];
+      if (recs.length === 2 && i === mid) return;
+      s += '<text x="' + x(i).toFixed(1) + '" y="' + (H-7) + '" text-anchor="' + anchor + '" font-size="10.5" fill="var(--ink-3)">' + fmtMD(recs[i].date) + "</text>";
+    });
+
+    // 触摸/悬停命中区
+    s += '<rect id="hit-' + subject + '" x="0" y="0" width="' + W + '" height="' + H + '" fill="transparent"/>';
+    s += '<circle id="hover-' + subject + '" r="5.5" fill="none" stroke="' + color + '" stroke-width="2.5" opacity="0"/>';
+    s += "</svg>";
+    box.innerHTML = s;
+
+    // 交互:最近点高亮 + 顶部读数
+    var svgEl = box.querySelector("svg");
+    var hoverEl = $("hover-" + subject);
+    function nearest(evt){
+      var rect = svgEl.getBoundingClientRect();
+      var px = (evt.clientX - rect.left) / rect.width * W;
+      var best = 0, bd = 1e9;
+      pts.forEach(function(p,i){ var d = Math.abs(p[0]-px); if (d < bd){ bd = d; best = i; } });
+      return best;
+    }
+    function show(i){
+      var p = pts[i], r = p[2];
+      hoverEl.setAttribute("cx", p[0].toFixed(1));
+      hoverEl.setAttribute("cy", p[1].toFixed(1));
+      hoverEl.setAttribute("opacity", "1");
+      live.innerHTML = "<b>" + fmtCN(r.date) + " · " + r.weight.toFixed(dec) + " kg</b>";
+    }
+    var onMove = function(e){ show(nearest(e)); };
+    var onLeave = function(){
+      hoverEl.setAttribute("opacity", "0");
+      live.innerHTML = "<b>" + last.weight.toFixed(dec) + " kg</b>" +
+        (prev ? " · 较上次 " + fmtSigned(last.weight - prev.weight) : "");
+    };
+    svgEl.addEventListener("pointermove", onMove);
+    svgEl.addEventListener("pointerdown", onMove);
+    svgEl.addEventListener("pointerleave", onLeave);
+
+    note.textContent = recs.length === 1
+      ? "只有 1 条记录,记满 2 条起显示趋势。"
+      : "显示最近 " + recs.length + " 条记录";
+    if (recs.some(function(r){ return r.sample; })) note.textContent += "(含示例)";
+  }
+
+  /* ================= 渲染:明细列表 ================= */
+  function renderList(){
+    var el = $("rec-list");
+    var all = state.records.slice().sort(function(a,b){ return a.date < b.date ? 1 : (a.date > b.date ? -1 : (b.ts||0)-(a.ts||0)); });
+    if (all.length === 0){ el.innerHTML = '<div class="no-data" style="padding-block:10px;color:var(--ink-3);font-size:14px">还没有记录</div>'; return; }
+    var html = "";
+    all.forEach(function(r, idx){
+      // 同对象更早的一条(按时间正序),用于变化量
+      var older = null;
+      for (var j = idx+1; j < all.length; j++){ if (all[j].subject === r.subject){ older = all[j]; break; } }
+      var dec = r.subject === "cat" ? 2 : 1;
+      var whoName = r.subject === "cat" ? state.settings.catName : "我";
+      var noteText = r.note || "";
+      if (r.sample) noteText = noteText ? noteText + "(示例)" : "示例数据";
+      html += '<div class="rec"' + (r.sample ? ' style="opacity:.7"' : "") + ">" +
+        '<span class="dot" style="background:var(--' + (r.subject === "cat" ? "cat" : "me") + ')"></span>' +
+        '<span class="date">' + fmtCN(r.date) + "</span>" +
+        '<span class="who">' + whoName + "</span>" +
+        '<span class="w">' + r.weight.toFixed(dec) + " <small>kg</small></span>" +
+        '<span class="delta">' + (older ? fmtSigned(r.weight - older.weight) : "—") + "</span>" +
+        '<span class="note">' + noteText + "</span>" +
+        '<button class="del" type="button" data-id="' + r.id + '">删除</button>' +
+        "</div>";
+    });
+    el.innerHTML = html;
+    el.querySelectorAll(".del").forEach(function(btn){
+      var id = btn.getAttribute("data-id");
+      var armTimer = null;
+      btn.addEventListener("click", function(){
+        if (btn.classList.contains("confirm")){
+          deleteRecord(id);
+          showToast("已删除");
+        } else {
+          btn.classList.add("confirm");
+          btn.textContent = "确认?";
+          armTimer = setTimeout(function(){ btn.classList.remove("confirm"); btn.textContent = "删除"; }, 2600);
+        }
+      });
+    });
+  }
+
+  /* ================= 渲染:全局 ================= */
+  function renderAll(){
+    var catName = state.settings.catName || "小葵";
+    $("seg-cat-name").textContent = catName;
+    $("tile-cat-name").textContent = catName;
+    $("chart-cat-name").textContent = catName;
+
+    var hasSample = state.records.some(function(r){ return r.sample; });
+    $("sample-banner").classList.toggle("on", hasSample);
+
+    renderTileMe();
+    renderTileCat();
+    renderChart("chart-me", "live-me", "chart-me-note", "me", "--me",
+      state.settings.targetMe ? { target: state.settings.targetMe } : {});
+    renderChart("chart-cat", "live-cat", "chart-cat-note", "cat", "--cat",
+      { band: { min: state.settings.catMin, max: state.settings.catMax } });
+    renderList();
+    updateFooter();
+  }
+
+  function updateFooter(){
+    var f = $("foot");
+    if (state.cloud){
+      f.innerHTML = '<span class="cloud-dot"></span>数据保存在你的 Claude 账号云端,手机电脑同步';
+    } else {
+      f.innerHTML = '<span class="local-dot"></span>数据保存在这台设备的浏览器里' + (cdb ? "(云端暂不可用)" : "");
+    }
+  }
+
+  function fillSettingsForm(){
+    var s = state.settings;
+    $("set-height").value = s.height || "";
+    $("set-target").value = s.targetMe || "";
+    $("set-catname").value = s.catName || "";
+    $("set-cat-min").value = s.catMin || "";
+    $("set-cat-max").value = s.catMax || "";
+  }
+
+  /* ================= 交互绑定 ================= */
+  function setSubject(subj){
+    state.subject = subj;
+    var me = subj === "me";
+    $("seg-me").setAttribute("aria-pressed", me ? "true" : "false");
+    $("seg-cat").setAttribute("aria-pressed", me ? "false" : "true");
+    $("btn-save").classList.toggle("cat-mode", !me);
+    $("btn-save").textContent = me ? "记下我的体重" : "记下 " + (state.settings.catName || "小葵") + " 的体重";
+  }
+
+  function bindUI(){
+    $("seg-me").addEventListener("click", function(){ setSubject("me"); });
+    $("seg-cat").addEventListener("click", function(){ setSubject("cat"); });
+
+    $("btn-save").addEventListener("click", function(){
+      var w = parseFloat($("in-weight").value);
+      var d = $("in-date").value || todayStr();
+      var note = $("in-note").value.trim();
+      var msg = $("form-msg");
+      if (!(w > 0) || w > 300){ msg.textContent = "请输入有效的体重数字"; return; }
+      if (state.subject === "cat" && (w < 0.5 || w > 20)) { msg.textContent = "猫咪体重看起来不太对,请确认单位是 kg"; return; }
+      if (state.subject === "me" && w < 20) { msg.textContent = "成人体重请以 kg 为单位"; return; }
+      msg.textContent = "";
+      var updated = saveRecord(state.subject, d, round2(w), note);
+      $("in-weight").value = "";
+      $("in-note").value = "";
+      showToast(updated ? "同日已有记录,已更新" : "已记录");
+    });
+
+    $("btn-save-settings").addEventListener("click", function(){
+      saveSettings();
+      showToast("设置已保存");
+      setSubject(state.subject); // 刷新按钮上的猫名
+    });
+
+    $("btn-export").addEventListener("click", function(){
+      var payload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        settings: state.settings,
+        records: state.records
+      };
+      var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      var a = document.createElement("a");
+      var href = URL.createObjectURL(blob);
+      a.href = href;
+      a.download = "体重簿备份-" + todayStr().replace(/-/g, "") + ".json";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(href); }, 4000);
+      showToast("已导出备份文件");
+    });
+
+    $("btn-import").addEventListener("click", function(){ $("in-import").click(); });
+    $("in-import").addEventListener("change", function(){
+      var f = this.files && this.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function(){
+        try {
+          var data = JSON.parse(reader.result);
+          if (!data || !Array.isArray(data.records)) throw new Error("bad format");
+          var byId = {};
+          state.records.forEach(function(r){ byId[r.id] = r; });
+          data.records.forEach(function(r){
+            if (!r || !r.subject || !r.date || !(r.weight > 0)) return;
+            var id = r.subject + "_" + String(r.date).slice(0,10).replace(/-/g, "");
+            byId[id] = {
+              id: id, subject: r.subject === "cat" ? "cat" : "me",
+              date: String(r.date).slice(0,10), weight: +r.weight,
+              note: r.note || "", sample: !!r.sample, ts: r.ts || 0
+            };
+          });
+          state.records = Object.keys(byId).map(function(k){ return byId[k]; });
+          if (data.settings) state.settings = Object.assign({}, DEFAULT_SETTINGS, data.settings);
+          sortRecords();
+          lsWrite();
+          state.records.forEach(function(r){ cloudSet("records", r.id, recToDoc(r)); });
+          fillSettingsForm();
+          setSubject(state.subject);
+          renderAll();
+          showToast("已导入,共 " + state.records.length + " 条记录");
+        } catch(e){
+          showToast("文件格式不对,导入已取消");
+        }
+        $("in-import").value = "";
+      };
+      reader.readAsText(f, "utf-8");
+    });
+
+    var d = todayStr();
+    $("today-label").textContent = fmtCN(d);
+    $("in-date").value = d;
+    fillSettingsForm();
+    setSubject("me");
+  }
+
+  /* ================= 启动 ================= */
+  function boot(hot){
+    bindUI();
+    if (hot && hot.subject) state.subject = hot.subject;
+    initStorage();
+    if (hot && hot.subject) setSubject(hot.subject);
+    if (hot){
+      if (hot.w) $("in-weight").value = hot.w;
+      if (hot.note) $("in-note").value = hot.note;
+      if (hot.date) $("in-date").value = hot.date;
+    }
+    // 复发布时保存轻量表单状态
+    if (window.claude && window.claude.hot && window.claude.hot.snapshot){
+      window.claude.hot.snapshot(function(){
+        return {
+          subject: state.subject,
+          w: $("in-weight").value,
+          note: $("in-note").value,
+          date: $("in-date").value
+        };
+      });
+    }
+  }
+  window.claude && window.claude.hot && window.claude.hot.ready
+    ? window.claude.hot.ready(boot)
+    : boot((window.claude && window.claude.hot && window.claude.hot.data) || {});
+
+  // PWA:HTTPS 下注册 Service Worker,离线可开(http 本地调试时自动跳过)
+  if ("serviceWorker" in navigator && location.protocol === "https:"){
+    navigator.serviceWorker.register("./sw.js").catch(function(){});
+  }
+})();
+</script>
