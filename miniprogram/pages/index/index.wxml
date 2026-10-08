@@ -1,0 +1,138 @@
+<view class="wrap">
+  <view class="kicker">每日一称</view>
+  <view class="title-row">
+    <text class="h1">一人一猫体重簿</text>
+    <text class="today">{{todayLabel}}</text>
+  </view>
+  <view wx:if="{{hasSample}}" class="banner">当前展示的是示例数据 —— 记下第一笔真实体重后会自动清除。</view>
+
+  <!-- 录入 -->
+  <view class="entry">
+    <view class="seg">
+      <view class="seg-btn {{subject === 'me' ? 'on' : ''}}" bindtap="setSubject" data-s="me">
+        <view class="dot dot-me"></view><text>我</text>
+      </view>
+      <view class="seg-btn {{subject === 'cat' ? 'on' : ''}}" bindtap="setSubject" data-s="cat">
+        <view class="dot dot-cat"></view><text>{{catName}}</text>
+      </view>
+    </view>
+
+    <view class="field-row">
+      <view class="field">
+        <view class="label">体重(kg)</view>
+        <input class="weight-input" type="digit" value="{{weightValue}}" bindinput="onWeightInput"
+               placeholder="0.00" placeholder-class="ph" />
+      </view>
+      <view class="field">
+        <view class="label">日期</view>
+        <picker mode="date" value="{{dateValue}}" start="2020-01-01" end="{{today}}" bindchange="onDateChange">
+          <view class="picker-value">{{dateValue}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="field">
+      <view class="label">备注(可选)</view>
+      <input class="text-input" value="{{noteValue}}" bindinput="onNoteInput" maxlength="40"
+             placeholder="如:早上空腹 / 换粮第 3 天" placeholder-class="ph" />
+    </view>
+
+    <button class="save-btn {{subject === 'cat' ? 'cat-mode' : ''}}" bindtap="onTapSave">{{saveBtnText}}</button>
+    <view wx:if="{{formMsg}}" class="form-msg">{{formMsg}}</view>
+  </view>
+
+  <!-- 状态贴片 -->
+  <view class="tiles">
+    <view class="tile">
+      <view class="who"><view class="dot dot-me"></view><text>我</text></view>
+      <block wx:if="{{tileMe}}">
+        <view class="val">{{tileMe.val}}<text class="unit">kg</text></view>
+        <view class="sub">{{tileMe.sub}}</view>
+        <view class="chip chip-{{tileMe.chipCls}}">{{tileMe.chip}}</view>
+      </block>
+      <view wx:else class="no-data">还没有记录</view>
+    </view>
+    <view class="tile">
+      <view class="who"><view class="dot dot-cat"></view><text>{{catName}}</text></view>
+      <block wx:if="{{tileCat}}">
+        <view class="val">{{tileCat.val}}<text class="unit">kg</text></view>
+        <view class="sub">{{tileCat.sub}}</view>
+        <view class="chip chip-{{tileCat.chipCls}}">{{tileCat.chip}}</view>
+      </block>
+      <view wx:else class="no-data">还没有记录</view>
+    </view>
+  </view>
+
+  <!-- 图表 -->
+  <view class="chart-card">
+    <view class="chart-head">
+      <view class="name"><view class="dot dot-me"></view><text>我的体重</text></view>
+      <view class="live">{{liveMe}}</view>
+    </view>
+    <canvas type="2d" id="chart-me" class="chart" disable-scroll
+            bindtouchstart="onChartTouch" bindtouchmove="onChartTouch" bindtouchend="onChartTouchEnd"
+            data-subject="me"></canvas>
+    <view class="chart-note">{{noteMe}}</view>
+  </view>
+
+  <view class="chart-card">
+    <view class="chart-head">
+      <view class="name"><view class="dot dot-cat"></view><text>{{catName}}的体重</text></view>
+      <view class="live">{{liveCat}}</view>
+    </view>
+    <canvas type="2d" id="chart-cat" class="chart" disable-scroll
+            bindtouchstart="onChartTouch" bindtouchmove="onChartTouch" bindtouchend="onChartTouchEnd"
+            data-subject="cat"></canvas>
+    <view class="chart-note">{{noteCat}}</view>
+  </view>
+
+  <!-- 明细 -->
+  <view class="list-title">记录明细</view>
+  <view class="rec" wx:for="{{rows}}" wx:key="id" style="{{item.dim ? 'opacity:.7' : ''}}">
+    <view class="dot {{item.dotCls}}"></view>
+    <text class="date">{{item.date}}</text>
+    <text class="who">{{item.who}}</text>
+    <text class="w">{{item.w}} kg</text>
+    <text class="delta">{{item.delta}}</text>
+    <text class="note" decode="{{true}}">{{item.note}}</text>
+    <view class="del {{item.confirm ? 'confirm' : ''}}" catchtap="onTapDelete" data-index="{{index}}">{{item.confirm ? '确认?' : '删除'}}</view>
+  </view>
+  <view wx:if="{{!rows.length}}" class="no-data pad">还没有记录</view>
+
+  <!-- 设置 -->
+  <view class="settings-head" bindtap="toggleSettings">
+    <text>设置</text><text class="arrow {{openSettings ? 'rot' : ''}}">›</text>
+  </view>
+  <view wx:if="{{openSettings}}" class="settings-body">
+    <view class="settings-grid">
+      <view class="field">
+        <view class="label">我的身高(cm)</view>
+        <input class="text-input" type="digit" value="{{setHeight}}" data-field="setHeight" bindinput="onSetInput" placeholder="170" placeholder-class="ph" />
+      </view>
+      <view class="field">
+        <view class="label">我的目标体重(kg)</view>
+        <input class="text-input" type="digit" value="{{setTarget}}" data-field="setTarget" bindinput="onSetInput" placeholder="选填" placeholder-class="ph" />
+      </view>
+      <view class="field">
+        <view class="label">猫的名字</view>
+        <input class="text-input" value="{{setCatName}}" data-field="setCatName" bindinput="onSetInput" placeholder="小葵" placeholder-class="ph" />
+      </view>
+      <view class="field">
+        <view class="label">猫理想区间下限(kg)</view>
+        <input class="text-input" type="digit" value="{{setCatMin}}" data-field="setCatMin" bindinput="onSetInput" placeholder="4.0" placeholder-class="ph" />
+      </view>
+      <view class="field">
+        <view class="label">猫理想区间上限(kg)</view>
+        <input class="text-input" type="digit" value="{{setCatMax}}" data-field="setCatMax" bindinput="onSetInput" placeholder="5.5" placeholder-class="ph" />
+      </view>
+    </view>
+    <button class="ghost-btn" bindtap="onTapSaveSettings">保存设置</button>
+    <view class="backup-row">
+      <button class="ghost-btn flex" bindtap="onTapExport">导出备份(复制)</button>
+      <button class="ghost-btn flex" bindtap="onTapImport">导入备份(粘贴)</button>
+    </view>
+    <view class="backup-hint">数据存在本机微信的小程序缓存里。导出会把备份 JSON 复制到剪贴板,粘贴到微信收藏或文件传输助手即可长期保存;导入时复制好备份内容再点导入。</view>
+  </view>
+
+  <view class="footer">{{footerText}}</view>
+</view>

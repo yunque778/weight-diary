@@ -1,0 +1,57 @@
+/* 全局基础:色板变量(浅色为基准,深色在页面级 media query 覆盖) */
+page {
+  --bg: #F6F3EC;
+  --surface: #FFFFFF;
+  --surface-2: #EFEAE0;
+  --ink: #29281F;
+  --ink-2: #6B675A;
+  --ink-3: #98937F;
+  --line: #E3DCCB;
+  --me: #0B7F5B;
+  --cat: #A8701F;
+  --good: #1F7A4D;
+  --good-soft: rgba(31, 122, 77, 0.13);
+  --warn: #8F6400;
+  --warn-soft: rgba(143, 100, 0, 0.13);
+  --bad: #B3372A;
+  --bad-soft: rgba(179, 55, 42, 0.12);
+  --shadow: 0 2rpx 4rpx rgba(41, 40, 31, 0.05), 0 8rpx 28rpx rgba(41, 40, 31, 0.06);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 30rpx;
+  line-height: 1.55;
+}
+@media (prefers-color-scheme: dark) {
+  page {
+    --bg: #1C1B17;
+    --surface: #262521;
+    --surface-2: #2E2C26;
+    --ink: #ECE7DA;
+    --ink-2: #B3AD9C;
+    --ink-3: #847E6D;
+    --line: #3B3931;
+    --me: #45A98C;
+    --cat: #C6822E;
+    --good: #5BBF8E;
+    --good-soft: rgba(91, 191, 142, 0.15);
+    --warn: #D9A94E;
+    --warn-soft: rgba(217, 169, 78, 0.15);
+    --bad: #E0705F;
+    --bad-soft: rgba(224, 112, 95, 0.15);
+    --shadow: 0 2rpx 4rpx rgba(0, 0, 0, 0.25), 0 8rpx 28rpx rgba(0, 0, 0, 0.25);
+  }
+}
+
+/* 按钮重置 */
+button {
+  font-size: inherit;
+  color: inherit;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border-radius: 0;
+  line-height: inherit;
+}
+button::after {
+  border: none;
+}
