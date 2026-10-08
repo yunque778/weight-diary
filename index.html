@@ -192,6 +192,8 @@
   .chart-head .live b{ color:var(--ink); font-weight:600; }
   .chart-card svg{ display:block; width:100%; height:auto; }
   .chart-note{ font-size:12px; color:var(--ink-3); margin-top:2px; }
+  .bmi-block{ margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+  .bmi-block svg{ display:block; width:100%; height:auto; }
 
   /* ---------- 记录列表 ---------- */
   .list-section h2{ font-size:16px; margin:20px 0 6px; }
@@ -314,6 +316,15 @@
     </div>
     <div id="chart-me"></div>
     <div class="chart-note" id="chart-me-note"></div>
+
+    <div class="bmi-block">
+      <div class="chart-head">
+        <div class="name"><span class="dot" style="background:var(--ink-2)"></span>我的 BMI</div>
+        <div class="live" id="live-bmi"></div>
+      </div>
+      <div id="chart-bmi"></div>
+      <div class="chart-note" id="chart-bmi-note"></div>
+    </div>
   </section>
 
   <section class="chart-card" aria-label="猫咪体重趋势">
@@ -694,9 +705,11 @@
 
   function renderChart(containerId, liveId, noteId, subject, colorVar, extras){
     var box = $(containerId), live = $(liveId), note = $(noteId);
-    var recs = state.records.filter(function(r){ return r.subject === subject; }).slice(-90);
-    var W = 360, H = 190, padL = 40, padR = 14, padT = 14, padB = 24;
-    var color = getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
+    var recs = (extras.source ? extras.source : state.records.filter(function(r){ return r.subject === subject; })).slice(-90);
+    var W = 360, H = extras.h || 190, padL = 40, padR = 14, padT = 14, padB = 24;
+    var color = extras.color || getComputedStyle(document.documentElement).getPropertyValue(colorVar).trim();
+    var unit = extras.unitless ? "" : " kg";
+    var prefix = extras.unitless ? "BMI " : "";
 
     if (recs.length === 0){
       box.innerHTML = "";
@@ -705,8 +718,8 @@
       return;
     }
     var last = recs[recs.length-1], prev = recs.length > 1 ? recs[recs.length-2] : null;
-    var dec = subject === "cat" ? 2 : 1;
-    live.innerHTML = "<b>" + last.weight.toFixed(dec) + " kg</b>" +
+    var dec = extras.dec || (subject === "cat" ? 2 : 1);
+    live.innerHTML = "<b>" + prefix + last.weight.toFixed(dec) + unit + "</b>" +
       (prev ? " · 较上次 " + fmtSigned(last.weight - prev.weight) : "");
 
     var fmtTick = function(v){
@@ -741,7 +754,7 @@
       var gvar = subject === "cat" ? "--good-soft" : "--me-soft";
       var gcol = getComputedStyle(document.documentElement).getPropertyValue(gvar).trim();
       s += '<rect x="' + padL + '" y="' + by1 + '" width="' + (W-padL-padR) + '" height="' + Math.max(by2-by1,0) + '" fill="' + gcol + '" rx="3"/>';
-      s += '<text x="' + (W-padR) + '" y="' + (by1-3) + '" text-anchor="end" font-size="10.5" fill="var(--good)">理想 ' + extras.band.min.toFixed(1) + "–" + extras.band.max.toFixed(1) + "</text>";
+      s += '<text x="' + (W-padR) + '" y="' + (by1-3) + '" text-anchor="end" font-size="10.5" fill="var(--good)">' + (extras.bandLabel || "理想 " + extras.band.min.toFixed(1) + "–" + extras.band.max.toFixed(1)) + "</text>";
     }
 
     // 网格 + y 标签
@@ -775,8 +788,21 @@
     // 末点强调
     var lp = pts[pts.length-1];
     s += '<circle cx="' + lp[0].toFixed(1) + '" cy="' + lp[1].toFixed(1) + '" r="4.5" fill="' + color + '" stroke="var(--surface)" stroke-width="2"/>';
-    var lx = Math.min(lp[0]+8, W-padR-4);
-    s += '<text x="' + lx + '" y="' + (lp[1]-8) + '" font-size="11.5" font-weight="600" fill="var(--ink)" text-anchor="' + (lx > W-60 ? "end" : "start") + '">' + last.weight.toFixed(dec) + "</text>";
+    // 数值标注:≤10 个点全标;更多则按间隔采样标注,首末必标
+    var nPts = pts.length;
+    var stepN = nPts <= 10 ? 1 : Math.ceil(nPts / 10);
+    for (var ii = 0; ii < nPts; ii += stepN){
+      var p = pts[ii];
+      var ty = p[1] - 8 < padT + 10 ? p[1] + 14 : p[1] - 8;
+      var tx = Math.min(Math.max(p[0], padL + 14), W - padR - 14);
+      s += '<text x="' + tx.toFixed(1) + '" y="' + ty.toFixed(1) + '" font-size="10" font-weight="600" fill="var(--ink)" text-anchor="middle">' + recs[ii].weight.toFixed(dec) + "</text>";
+    }
+    if ((nPts - 1) % stepN !== 0){
+      var pe = pts[nPts-1];
+      var tye = pe[1] - 8 < padT + 10 ? pe[1] + 14 : pe[1] - 8;
+      var txe = Math.min(Math.max(pe[0], padL + 14), W - padR - 14);
+      s += '<text x="' + txe.toFixed(1) + '" y="' + tye.toFixed(1) + '" font-size="10" font-weight="600" fill="var(--ink)" text-anchor="middle">' + last.weight.toFixed(dec) + "</text>";
+    }
 
     // x 标签:首、中、末
     var mid = Math.floor((recs.length-1)/2);
@@ -807,12 +833,12 @@
       hoverEl.setAttribute("cx", p[0].toFixed(1));
       hoverEl.setAttribute("cy", p[1].toFixed(1));
       hoverEl.setAttribute("opacity", "1");
-      live.innerHTML = "<b>" + fmtCN(r.date) + " · " + r.weight.toFixed(dec) + " kg</b>";
+      live.innerHTML = "<b>" + fmtCN(r.date) + " · " + prefix + r.weight.toFixed(dec) + unit + "</b>";
     }
     var onMove = function(e){ show(nearest(e)); };
     var onLeave = function(){
       hoverEl.setAttribute("opacity", "0");
-      live.innerHTML = "<b>" + last.weight.toFixed(dec) + " kg</b>" +
+      live.innerHTML = "<b>" + prefix + last.weight.toFixed(dec) + unit + "</b>" +
         (prev ? " · 较上次 " + fmtSigned(last.weight - prev.weight) : "");
     };
     svgEl.addEventListener("pointermove", onMove);
@@ -823,6 +849,34 @@
       ? "只有 1 条记录,记满 2 条起显示趋势。"
       : "显示最近 " + recs.length + " 条记录";
     if (recs.some(function(r){ return r.sample; })) note.textContent += "(含示例)";
+  }
+
+  function renderBmiChart(){
+    var h = state.settings.height;
+    var meRecs = state.records.filter(function(r){ return r.subject === "me"; });
+    if (!h || h < 80){
+      $("chart-bmi").innerHTML = "";
+      $("live-bmi").textContent = meRecs.length ? "待设置" : "待设置";
+      $("chart-bmi-note").textContent = "在设置里填身高后,这里会显示 BMI 曲线。";
+      return;
+    }
+    if (!meRecs.length){
+      $("chart-bmi").innerHTML = "";
+      $("live-bmi").textContent = "暂无数据";
+      $("chart-bmi-note").textContent = "记一笔体重后,这里会出现 BMI 曲线。";
+      return;
+    }
+    renderChart("chart-bmi", "live-bmi", "chart-bmi-note", "bmi", null, {
+      source: meRecs.map(function(r){
+        return { date: r.date, weight: round1(r.weight / Math.pow(h/100, 2)) };
+      }),
+      color: getComputedStyle(document.documentElement).getPropertyValue("--ink-2").trim(),
+      band: { min: 18.5, max: 24 },
+      bandLabel: "正常 18.5–24.0",
+      dec: 1,
+      h: 150,
+      unitless: true
+    });
   }
 
   /* ================= 渲染:明细列表 ================= */
@@ -880,6 +934,7 @@
     renderTileCat();
     renderChart("chart-me", "live-me", "chart-me-note", "me", "--me",
       state.settings.targetMe ? { target: state.settings.targetMe } : {});
+    renderBmiChart();
     renderChart("chart-cat", "live-cat", "chart-cat-note", "cat", "--cat",
       { band: { min: state.settings.catMin, max: state.settings.catMax } });
     renderList();
@@ -930,6 +985,7 @@
       var updated = saveRecord(state.subject, d, round2(w), note);
       $("in-weight").value = "";
       $("in-note").value = "";
+      $("in-date").value = todayStr();
       showToast(updated ? "同日已有记录,已更新" : "已记录");
     });
 

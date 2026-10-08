@@ -83,8 +83,10 @@ Page({
     tileCat: null,
     liveMe: "",
     liveCat: "",
+    liveBmi: "",
     noteMe: "",
     noteCat: "",
+    noteBmi: "",
     rows: [],
     footerText: "数据保存在本机微信的小程序缓存里",
     openSettings: false,
@@ -206,7 +208,7 @@ Page({
     if (this.data.subject === "cat" && (w < 0.5 || w > 20)){ this.setData({ formMsg: "猫咪体重看起来不太对,请确认单位是 kg" }); return; }
     if (this.data.subject === "me" && w < 20){ this.setData({ formMsg: "成人体重请以 kg 为单位" }); return; }
     const updated = this.saveRecord(this.data.subject, d, round2(w), note);
-    this.setData({ weightValue: "", noteValue: "", formMsg: "" });
+    this.setData({ weightValue: "", noteValue: "", formMsg: "", dateValue: todayStr() });
     this.renderAll();
     this.drawCharts();
     wx.showToast({ title: updated ? "同日已有记录,已更新" : "已记录", icon: "none" });
@@ -375,13 +377,31 @@ Page({
   drawCharts(){
     this.drawChart("me");
     this.drawChart("cat");
+    this.drawChart("bmi");
   },
 
   drawChart(subject, hoverIdx){
-    const recs = this.records.filter(function(r){ return r.subject === subject; }).slice(-90);
-    const id = subject === "me" ? "#chart-me" : "#chart-cat";
-    const patchKey = subject === "me" ? "liveMe" : "liveCat";
-    const noteKey = subject === "me" ? "noteMe" : "noteCat";
+    const patchKey = subject === "me" ? "liveMe" : (subject === "cat" ? "liveCat" : "liveBmi");
+    const noteKey = subject === "me" ? "noteMe" : (subject === "cat" ? "noteCat" : "noteBmi");
+    const id = subject === "me" ? "#chart-me" : (subject === "cat" ? "#chart-cat" : "#chart-bmi");
+    let recs;
+    if (subject === "bmi"){
+      const h = this.settings.height;
+      const meArr = this.records.filter(function(r){ return r.subject === "me"; });
+      if (!h || h < 80 || !meArr.length){
+        this.charts[subject] = null;
+        this.setData({
+          [patchKey]: (h && h >= 80) ? "暂无数据" : "待设置",
+          [noteKey]: (h && h >= 80) ? "记一笔体重后,这里会出现 BMI 曲线。" : "在设置里填身高后,这里会显示 BMI 曲线。"
+        });
+        return;
+      }
+      recs = meArr.map(function(r){
+        return { date: r.date, weight: round1(r.weight / Math.pow(h / 100, 2)) };
+      }).slice(-90);
+    } else {
+      recs = this.records.filter(function(r){ return r.subject === subject; }).slice(-90);
+    }
     if (!recs.length){
       this.charts[subject] = null;
       this.setData({ [patchKey]: "暂无数据", [noteKey]: "在上方记一笔后,这里会出现趋势线。" });
@@ -399,14 +419,16 @@ Page({
       ctx.clearRect(0, 0, W, H);
 
       const C = COLORS[this.theme];
-      const color = subject === "me" ? C.me : C.cat;
+      const color = subject === "cat" ? C.cat : (subject === "bmi" ? C.ink2 : C.me);
       const padL = 40, padR = 14, padT = 14, padB = 24;
       const last = recs[recs.length - 1];
       const prev = recs.length > 1 ? recs[recs.length - 2] : null;
       const dec = subject === "cat" ? 2 : 1;
 
       const target = subject === "me" ? this.settings.targetMe : null;
-      const band = subject === "cat" ? { min: this.settings.catMin, max: this.settings.catMax } : null;
+      const band = subject === "cat"
+        ? { min: this.settings.catMin, max: this.settings.catMax }
+        : (subject === "bmi" ? { min: 18.5, max: 24 } : null);
       let vals = recs.map(function(r){ return r.weight; });
       if (target) vals = vals.concat([target]);
       if (band) vals = vals.concat([band.min, band.max]);
@@ -431,7 +453,7 @@ Page({
         ctx.fillStyle = C.good;
         ctx.font = "10px sans-serif";
         ctx.textAlign = "right";
-        ctx.fillText("理想 " + band.min.toFixed(1) + "–" + band.max.toFixed(1), W - padR, Math.max(y1 - 3, 10));
+        ctx.fillText((subject === "bmi" ? "正常 " : "理想 ") + band.min.toFixed(1) + "–" + band.max.toFixed(1), W - padR, Math.max(y1 - 3, 10));
       }
 
       // 网格 + y 标签
@@ -496,11 +518,21 @@ Page({
       ctx.beginPath(); ctx.arc(lp.x, lp.y, 4.5, 0, Math.PI * 2);
       ctx.fillStyle = color; ctx.fill();
       ctx.lineWidth = 2; ctx.strokeStyle = C.surface; ctx.stroke();
-      const anchorEnd = (lp.x + 8) > W - 60;
+      // 数值标注:≤10 个点全标;更多则按间隔采样标注,首末必标
+      const nPts = pts.length;
+      const stepN = nPts <= 10 ? 1 : Math.ceil(nPts / 10);
+      const idxs = [];
+      for (let i = 0; i < nPts; i += stepN) idxs.push(i);
+      if (idxs[idxs.length - 1] !== nPts - 1) idxs.push(nPts - 1);
       ctx.fillStyle = C.ink;
-      ctx.font = "600 11px sans-serif";
-      ctx.textAlign = anchorEnd ? "right" : "left";
-      ctx.fillText(last.weight.toFixed(dec), anchorEnd ? W - padR - 2 : lp.x + 8, lp.y - 8);
+      ctx.font = "600 10px sans-serif";
+      ctx.textAlign = "center";
+      idxs.forEach(function(i){
+        const p = pts[i];
+        const ty = p.y - 8 < padT + 10 ? p.y + 14 : p.y - 8;
+        const tx = Math.min(Math.max(p.x, padL + 14), W - padR - 14);
+        ctx.fillText(recs[i].weight.toFixed(dec), tx, ty);
+      });
 
       // x 标签:首/中/末
       ctx.fillStyle = C.ink3;
@@ -519,9 +551,11 @@ Page({
         ctx.strokeStyle = color; ctx.lineWidth = 2.5; ctx.stroke();
       }
 
+      const unit = subject === "bmi" ? "" : " kg";
+      const prefix = subject === "bmi" ? "BMI " : "";
       const liveText = (hoverIdx !== undefined && hoverIdx !== null && recs[hoverIdx])
-        ? fmtCN(recs[hoverIdx].date) + " · " + recs[hoverIdx].weight.toFixed(dec) + " kg"
-        : last.weight.toFixed(dec) + " kg" + (prev ? " · 较上次 " + fmtSigned(last.weight - prev.weight) : "");
+        ? fmtCN(recs[hoverIdx].date) + " · " + prefix + recs[hoverIdx].weight.toFixed(dec) + unit
+        : prefix + last.weight.toFixed(dec) + unit + (prev ? " · 较上次 " + fmtSigned(last.weight - prev.weight) : "");
       const noteText = recs.length === 1 ? "只有 1 条记录,记满 2 条起显示趋势" : "显示最近 " + recs.length + " 条记录";
       this.setData({ [patchKey]: liveText, [noteKey]: noteText });
       this.charts[subject] = { pts: pts, recs: recs };

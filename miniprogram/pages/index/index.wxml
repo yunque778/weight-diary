@@ -73,6 +73,17 @@
             bindtouchstart="onChartTouch" bindtouchmove="onChartTouch" bindtouchend="onChartTouchEnd"
             data-subject="me"></canvas>
     <view class="chart-note">{{noteMe}}</view>
+
+    <view class="bmi-block">
+      <view class="chart-head">
+        <view class="name"><view class="dot dot-bmi"></view><text>我的 BMI</text></view>
+        <view class="live">{{liveBmi}}</view>
+      </view>
+      <canvas type="2d" id="chart-bmi" class="chart chart-bmi" disable-scroll
+              bindtouchstart="onChartTouch" bindtouchmove="onChartTouch" bindtouchend="onChartTouchEnd"
+              data-subject="bmi"></canvas>
+      <view class="chart-note">{{noteBmi}}</view>
+    </view>
   </view>
 
   <view class="chart-card">
